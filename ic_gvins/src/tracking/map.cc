@@ -50,10 +50,10 @@ void Map::insertKeyFrame(const Frame::Ptr &frame) {
     }
 }
 
-vector<ulong> Map::orderedKeyFrames() {
+vector<std::uint64_t> Map::orderedKeyFrames() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    vector<ulong> keyframeid;
+    vector<std::uint64_t> keyframeid;
     for (auto &keyframe : keyframes_) {
         keyframeid.push_back(keyframe.first);
     }
@@ -91,7 +91,7 @@ void Map::removeKeyFrame(Frame::Ptr &frame, bool isremovemappoint) {
 
     if (isremovemappoint) {
         // 移除与关键帧关联的所有路标点
-        vector<ulong> mappointid;
+        vector<std::uint64_t> mappointid;
         auto features = frame->features();
         for (auto &feature : features) {
             auto mappoint = feature.second->getMapPoint();

@@ -1,6 +1,6 @@
 # IC-GVINS ROS2 Jazzy 运行与 urban39 评测指南
 
-本文档适用于当前仓库的 ROS2 Jazzy 版本。示例路径与本机现有数据一致：
+本文档的 apt 安装与 `/opt/ros` 示例适用于 Ubuntu 24.04。Apple Silicon macOS 请先使用 [README 的 Pixi 工作流](../README.md#16-native-macos-apple-silicon-with-pixi)；不要在 macOS 执行下文的 apt 命令。以下数据路径来自 Linux 验证环境：
 
 - 项目：`/home/kun24/IC-GVINS`
 - KAIST urban39：`/mnt/OpenDataset/kaist-urban39`

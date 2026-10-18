@@ -43,6 +43,8 @@
 #include <ceres/ceres.h>
 #include <yaml-cpp/yaml.h>
 
+#include <chrono>
+
 #include <unordered_set>
 
 namespace {
@@ -535,7 +537,7 @@ void GVINS::runTracking() {
                     ins_mutex_.unlock();
                     frame_buffer_mutex_.unlock();
 
-                    usleep(1000);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     continue;
                 }
                 ins_mutex_.unlock();
@@ -1013,7 +1015,7 @@ void GVINS::parametersStatistic() {
 
     // 所有关键帧
     // All keyframes
-    vector<ulong> keyframeids = map_->orderedKeyFrames();
+    vector<std::uint64_t> keyframeids = map_->orderedKeyFrames();
     size_t size               = keyframeids.size();
     if (size < 2) {
         return;
@@ -1492,7 +1494,7 @@ void GVINS::updateParametersFromOptimizer() {
 }
 
 bool GVINS::gvinsRemoveAllSecondNewFrame() {
-    vector<ulong> keyframeids = map_->orderedKeyFrames();
+    vector<std::uint64_t> keyframeids = map_->orderedKeyFrames();
 
     for (auto id : keyframeids) {
         auto frame = map_->keyframes().find(id)->second;
@@ -1516,7 +1518,7 @@ bool GVINS::gvinsMarginalization() {
 
     // 按时间先后排序的关键帧
     // Ordered keyframes
-    vector<ulong> keyframeids = map_->orderedKeyFrames();
+    vector<std::uint64_t> keyframeids = map_->orderedKeyFrames();
     auto latest_keyframe      = map_->latestKeyFrame();
 
     latest_keyframe->setKeyFrameState(KEYFRAME_NORMAL);

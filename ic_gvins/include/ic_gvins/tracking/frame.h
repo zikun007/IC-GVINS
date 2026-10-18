@@ -26,6 +26,7 @@
 #include "ic_gvins/common/types.h"
 #include "ic_gvins/tracking/feature.h"
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <opencv2/opencv.hpp>
@@ -46,7 +47,7 @@ public:
     typedef std::shared_ptr<Frame> Ptr;
 
     Frame() = delete;
-    Frame(ulong id, double stamp, Mat image);
+    Frame(std::uint64_t id, double stamp, Mat image);
 
     static Frame::Ptr createFrame(double stamp, const Mat &image);
 
@@ -77,7 +78,7 @@ public:
         pose_w_c_ = std::move(pose_w_c);
     }
 
-    std::unordered_map<ulong, Feature::Ptr> features() {
+    std::unordered_map<std::uint64_t, Feature::Ptr> features() {
         std::unique_lock<std::mutex> lock(frame_mutex_);
         return features_;
     }
@@ -107,7 +108,7 @@ public:
         unupdated_mappoints_.push_back(mappoint);
     }
 
-    void addFeature(ulong mappointid, const Feature::Ptr &features) {
+    void addFeature(std::uint64_t mappointid, const Feature::Ptr &features) {
         std::unique_lock<std::mutex> lock(frame_mutex_);
 
         features_.insert(make_pair(mappointid, features));
@@ -133,11 +134,11 @@ public:
         return iskeyframe_;
     }
 
-    ulong id() const {
+    std::uint64_t id() const {
         return id_;
     }
 
-    ulong keyFrameId() const {
+    std::uint64_t keyFrameId() const {
         return keyframe_id_;
     }
 
@@ -158,8 +159,8 @@ private:
 
     std::mutex frame_mutex_;
 
-    ulong id_;
-    ulong keyframe_id_;
+    std::uint64_t id_;
+    std::uint64_t keyframe_id_;
 
     double stamp_;
     double td_{0};
@@ -170,7 +171,7 @@ private:
 
     bool iskeyframe_;
 
-    std::unordered_map<ulong, Feature::Ptr> features_;
+    std::unordered_map<std::uint64_t, Feature::Ptr> features_;
     vector<std::shared_ptr<MapPoint>> unupdated_mappoints_;
 };
 

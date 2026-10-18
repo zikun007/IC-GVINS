@@ -27,7 +27,7 @@ Click the following image to open our video on [Bilibili](https://www.bilibili.c
 
 ### 1.1 System and compiler
 
-This ROS2 port targets Ubuntu 24.04 and ROS 2 Jazzy with a C++17 compiler.
+This ROS2 port uses ROS 2 Jazzy, C++20 and CMake >=3.16. Ubuntu 24.04 is supported; for native Apple Silicon macOS development, use the Pixi workflow below instead of the apt commands.
 
 ```shell
 sudo apt install build-essential python3-colcon-common-extensions
@@ -39,7 +39,7 @@ Install ROS 2 Jazzy, then source `/opt/ros/jazzy/setup.bash`. The optional visua
 
 ### 1.3 Ceres Solver with its Dependencies
 
-We use Ceres Solver to solve the non-linear least squares problem in IC-GVINS. The supported version is **Ceres Solver 2.0.0 or 2.1.0**. Please follow [Ceres installation instructions](http://ceres-solver.org/installation.html).
+We use Ceres Solver to solve the non-linear least squares problem in IC-GVINS. The current code requires **Ceres Solver >=2.1** (`ceres::Manifold`); the macOS Pixi environment uses **2.2.0**. Please follow [Ceres installation instructions](http://ceres-solver.org/installation.html).
 
 The dependencies **Eigen (>=3.3.7)**, **TBB**, **glog (>=0.4.0)** are also used in IC-GVINS. You can install them as follows:
 
@@ -62,6 +62,43 @@ sudo apt install libopencv-dev
 ```shell
 sudo apt install libyaml-cpp-dev
 ```
+
+### 1.6 Native macOS (Apple Silicon) with Pixi
+
+Install Apple's Command Line Tools and Pixi first. From the repository root:
+
+```shell
+pixi install --locked
+pixi run build
+pixi run start
+```
+
+`pixi.toml` and `pixi.lock` define an `osx-arm64` RoboStack Jazzy environment, including the compiler and C++ dependencies. `build` uses colcon with `Debug`, debug symbols and `compile_commands.json`; optimization is controlled by `CMAKE_BUILD_TYPE`, not hard-coded target flags. The build task excludes `/opt/homebrew` from CMake package discovery. If an existing build cache contains Homebrew libraries, run `pixi run build --cmake-clean-cache` once.
+
+`start` loads the installed workspace and launches the default KAIST urban39 configuration without RViz. Results go to `output/urban39/`. Pixi selects Cyclone DDS and the repository's loopback-only configuration automatically; do not source `/opt/ros/...` or mix Homebrew libraries into this environment. The loopback configuration uses `127.0.0.1` rather than a platform-specific interface name and explicitly configures unicast discovery.
+
+In a second terminal, a bounded smoke replay of an available local bag is:
+
+```shell
+pixi run ros2 bag play dataset/urban39_small \
+  --playback-duration 30 --rate 0.5 --delay 2 \
+  --qos-profile-overrides-path ic_gvins/config/rosbag_qos_reliable.yaml
+```
+
+Debug builds are for inspection, not real-time performance or accuracy comparisons. RViz is optional and not installed by default; add it with `pixi add ros-jazzy-rviz2` if needed. For a custom configuration, enter `pixi shell`, source `install/local_setup.zsh`, then run the launch command with `configfile:=/absolute/path/gvins.yaml`.
+
+For source-level debugging:
+
+```shell
+pixi run /usr/bin/lldb -- ./install/ic_gvins/lib/ic_gvins/ic_gvins_ros \
+  --ros-args -p configfile:=ic_gvins/config/kaist-urban39.yaml
+# In LLDB:
+# breakpoint set --file fusion_ros.cc --name main
+# run
+```
+
+The C++ node links C++ ROS message targets and strips unused dylibs on macOS: RoboStack's transitive ROS exports include Python message libraries which require a Python host and otherwise fail at startup with `_PyExc_RuntimeError`. No Python preload is needed. Frame, keyframe and map-point identifiers use `std::uint64_t` on every platform.
+
 
 ## 2 Build and run IC-GVINS
 

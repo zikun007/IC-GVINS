@@ -22,7 +22,7 @@
 
 #include "ic_gvins/tracking/frame.h"
 
-Frame::Frame(ulong id, double stamp, Mat image)
+Frame::Frame(std::uint64_t id, double stamp, Mat image)
     : id_(id)
     , keyframe_id_(0)
     , stamp_(stamp)
@@ -35,7 +35,7 @@ Frame::Frame(ulong id, double stamp, Mat image)
 }
 
 Frame::Ptr Frame::createFrame(double stamp, const Mat &image) {
-    static ulong factory_id = 0;
+    static std::uint64_t factory_id = 0;
 
     return std::make_shared<Frame>(factory_id++, stamp, image);
 }
@@ -43,7 +43,7 @@ Frame::Ptr Frame::createFrame(double stamp, const Mat &image) {
 void Frame::setKeyFrame(int state) {
     std::unique_lock<std::mutex> lock(frame_mutex_);
 
-    static ulong keyframe_factory_id = 0;
+    static std::uint64_t keyframe_factory_id = 0;
 
     if (!iskeyframe_) {
         iskeyframe_     = true;

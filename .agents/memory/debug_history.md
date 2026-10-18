@@ -11,6 +11,12 @@
 | ROS bag 通信不稳定 | 传感器 QoS 与播放器默认策略不匹配、缓存不足 | 提供 Reliable QoS 覆盖并扩大可靠队列 |
 | Abseil/Boost 冗余依赖 | 仅使用通用工具功能，Boost filesystem 实际未被源码使用 | 以标准库替换并从 CMake、文档和产物中移除依赖 |
 | Pose 坐标语义容易混淆 | 单一 `Pose {R,t}` 同时表示 body、camera、global 等关系 | 拆分四种强类型，并为坐标链增加回归测试 |
+| macOS 编译找不到 `ulong` / `usleep` | 依赖 Linux 类型别名与间接 POSIX 头文件 | ID 统一为 `std::uint64_t`，等待使用 `std::this_thread::sleep_for` |
+| Debug 构建仍被优化 | 两个目标硬编码 `-O3` | 移除目标级优化选项，由 `CMAKE_BUILD_TYPE` 控制 |
+| Pixi 构建混入 Homebrew 的 TBB/yaml-cpp | TBB 缺少开发包，yaml-cpp 使用裸库名 | 添加 `tbb-devel`；显式 Pixi 前缀、排除 Homebrew；使用 `yaml-cpp::yaml-cpp` |
+| macOS 节点启动时报 `_PyExc_RuntimeError` | ROS/rclcpp 导出依赖包含无用的 `rosidl_generator_py`，要求 Python 宿主 | 节点显式链接 C++ typesupport，并在 Apple 链接时使用 `-dead_strip_dylibs` 移除无用动态库；不预加载 Python |
+| 默认 DDS 报线程亲和性错误，loopback 配置无法发现节点 | Fast DDS 的 macOS 线程配置；禁用组播后缺少显式本机 peer | Pixi 选择 Cyclone DDS；接口按 `127.0.0.1` 匹配，添加本机单播 peer；ROS 图查询通过 |
+| OpenCV 不加组件时链接全部扩展模块 | `find_package(OpenCV REQUIRED)` 默认导出完整模块集合 | 仅声明 core、imgproc、calib3d、video，避免无用依赖 |
 
 ## 坐标与时间结论
 
@@ -35,7 +41,15 @@
 
 ## 已知命令注意事项
 
-- ROS2 Jazzy 当前 `ros2 bag play` 不支持曾尝试使用的 `--duration`；短回放应使用截取后的 bag 或外部可控终止。
+- ROS2 Jazzy 不支持 `--duration`；本次 Pixi 版本已实际使用 `--playback-duration 30` 完成有界回放。
 - `colcon` 的 `--log-base` 必须放在主命令之前。
 - Cyclone DDS 配置路径应指向包内 `ic_gvins/config/cyclonedds_localhost.xml` 或安装后的 share 路径。
 - 带 daemon 的 ROS2 图检查曾因 daemon 状态超时；排查发现问题时优先使用 `--no-daemon` 做隔离验证。
+
+## macOS 验证（2026-10-18）
+
+- `pixi install --locked`、Debug 编译、ROS launch、三路订阅与 loopback DDS 发现均已通过。
+- LLDB 实际命中 `fusion_ros.cc:250` 的 `main`，显示 `argc=4` 与源码栈帧。
+- Urban39 前 30 秒、0.5 倍速回放：226 个有效位姿，时间戳严格递增；GNSS/INS、视觉跟踪与优化路径均已执行，两个 launch 子节点均正常退出。
+- 冒烟脚本只向 Pixi 父进程发送一次 SIGINT，由其转发；同时向整个进程组发信号会造成重复转发，曾使静态 TF 进程在第二次信号后退出为 -2。该问题属于临时验证脚本，不是节点修复；脚本已在验证后删除。
+

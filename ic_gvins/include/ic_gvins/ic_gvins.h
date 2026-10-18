@@ -36,6 +36,7 @@
 #include <ceres/ceres.h>
 
 #include <atomic>
+#include <cstdint>
 #include <condition_variable>
 #include <iostream>
 #include <thread>
@@ -146,7 +147,7 @@ private:
     std::deque<IntegrationStateData> statedatalist_;
     std::deque<GNSS> gnsslist_;
     std::deque<double> timelist_;
-    std::unordered_map<ulong, double> invdepthlist_;
+    std::unordered_map<std::uint64_t, double> invdepthlist_;
     double extrinsic_[8]{0};
 
     // Permanently inflating GNSS covariance can turn a temporary estimator

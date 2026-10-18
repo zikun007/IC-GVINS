@@ -50,6 +50,7 @@ __pycache__/
 .tox/
 .venv/
 venv/
+.pixi/
 
 # Editor, language-server, and OS files
 /.cache/

@@ -26,6 +26,7 @@
 #include "ic_gvins/tracking/frame.h"
 #include "ic_gvins/tracking/mappoint.h"
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -35,8 +36,8 @@ class Map {
 public:
     typedef std::shared_ptr<Map> Ptr;
 
-    typedef std::unordered_map<ulong, Frame::Ptr> KeyFrames;
-    typedef std::unordered_map<ulong, MapPoint::Ptr> LandMarks;
+    typedef std::unordered_map<std::uint64_t, Frame::Ptr> KeyFrames;
+    typedef std::unordered_map<std::uint64_t, MapPoint::Ptr> LandMarks;
 
     Map() = delete;
     explicit Map(size_t size)
@@ -61,7 +62,7 @@ public:
         return landmarks_;
     }
 
-    vector<ulong> orderedKeyFrames();
+    vector<std::uint64_t> orderedKeyFrames();
     Frame::Ptr oldestKeyFrame();
     const Frame::Ptr &latestKeyFrame();
 

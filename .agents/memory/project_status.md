@@ -2,11 +2,7 @@
 
 最后更新：2026-10-18
 
-当前任务：按用户确认的简化方案，将 nav_core 的必要实现并入 common，删除 `cmake/`、`third_party/` 和 `test/`；完成构建验证后更新本状态。
-
-过程记录：首次中间构建时，旧兼容测试因 common 已切断对 `syscoord.hpp` 的间接包含而找不到 `nav::` 参考符号；测试已临时改为显式包含旧参考头，仅用于删除前的新旧数值对照。
-
-第二次中间构建时，静态链接器因核心库已不再使用 NavTime 而没有带入旧时间符号；临时测试目标显式链接旧 `open_nav_core` 后继续对照，该目标和链接项将在验证后一起删除。
+当前任务：按用户确认完成 Apple Silicon macOS 原生 Pixi/ROS2 Jazzy 编译环境，并验证节点运行与 LLDB 调试。
 
 ## 本次文档维护
 
@@ -22,7 +18,19 @@
 - ROS 包源码位于 `ic_gvins/`，运行配置位于 `ic_gvins/config/`。
 - 完整 Urban39 bag 位于 `/mnt/OpenDataset/kaist-urban39/urban39_ros2_bag_fixed`；仓库内验证片段为 `dataset/urban39_small`。
 
-## 最近验证
+## macOS 原生开发环境
+
+- 新增 `pixi.toml`、`pixi.lock`，平台为 `osx-arm64`；`.pixi/` 不纳入版本控制。
+- `pixi install --locked` 与 `pixi run build` 已通过；Clang 21.1.8、CMake 3.31.8、Ceres 2.2.0、Eigen 3.4.0、Python 3.12.15。
+- `pixi run start` 已验证配置加载、融合/跟踪/优化线程启动、三路传感器订阅和 SIGINT 正常退出；默认不启动 RViz。
+- LLDB 已实际停在 `fusion_ros.cc:250` 的 `main` 源码断点，能显示参数和当前栈帧。
+- Debug 构建以 0.5 倍速回放 Urban39 前 30 秒真实数据，完成 GNSS/INS 初始化、视觉跟踪、三角化、Ceres 优化与边缘化；输出 `output/urban39/T20261018220110/trajectory.csv`，226 个位姿、8 列均为有限值、时间戳严格递增；融合节点与静态 TF 节点均在 SIGINT 后正常退出。
+- 本次仅做运行级冒烟验证，未进行完整 180 秒回放、精度评估或 RViz 图形验收；Ceres 在多次优化中仍报告既有的 `NO_CONVERGENCE`。
+- 用户要求将非标准 `ulong` 统一替换为 `std::uint64_t`；帧、关键帧、地图点、ID 容器及实现均已迁移并编译通过。
+- 编译器仍报告 `tracking.cc` 中现有变长数组的 Clang 扩展警告；不影响本次构建，未额外修改跟踪算法。
+- macOS 使用说明位于 README 的 1.6 节；Ubuntu 运行指南保留在 `docs/02-ros2-run-guide.md`。本次未修改现有 Linux 导向的 VS Code Python 路径，也未执行 git commit。
+
+## 历史 Linux 验证
 
 - 增量构建通过，`common_nav_core_test`：1/1 通过。
 - `urban39_small` 时长 179.995432851 秒，共 19968 条消息；两次 1 倍速播放均正常结束。

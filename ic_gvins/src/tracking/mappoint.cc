@@ -23,7 +23,7 @@
 #include "ic_gvins/tracking/mappoint.h"
 #include "ic_gvins/tracking/frame.h"
 
-MapPoint::MapPoint(ulong id, const std::shared_ptr<Frame> &ref_frame, Vector3d pos, cv::Point2f keypoint, double depth,
+MapPoint::MapPoint(std::uint64_t id, const std::shared_ptr<Frame> &ref_frame, Vector3d pos, cv::Point2f keypoint, double depth,
                    MapPointType type)
     : pos_(std::move(pos))
     , depth_(depth)
@@ -44,7 +44,7 @@ MapPoint::MapPoint(ulong id, const std::shared_ptr<Frame> &ref_frame, Vector3d p
 
 MapPoint::Ptr MapPoint::createMapPoint(std::shared_ptr<Frame> &ref_frame, Vector3d &pos, cv::Point2f &feature,
                                        double depth, MapPointType type) {
-    static ulong factory_id_ = 0;
+    static std::uint64_t factory_id_ = 0;
     return std::make_shared<MapPoint>(factory_id_++, ref_frame, pos, feature, depth, type);
 }
 
@@ -71,7 +71,7 @@ void MapPoint::setReferenceFrame(const std::shared_ptr<Frame> &frame, Vector3d p
     isneedupdate_           = true;
 }
 
-ulong MapPoint::referenceFrameId() {
+std::uint64_t MapPoint::referenceFrameId() {
     std::unique_lock<std::mutex> lock(mappoint_mutex_);
     auto frame = ref_frame_.lock();
     if (frame) {

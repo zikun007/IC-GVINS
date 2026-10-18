@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(ic_gvins)
 
 # Use one language level across the estimator and ROS2 interface.
@@ -13,7 +13,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc calib3d video)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Ceres REQUIRED)
@@ -41,7 +41,7 @@ add_library(ic_gvins_core SHARED
     src/misc.cc
 )
 target_compile_features(ic_gvins_core PUBLIC cxx_std_20)
-target_compile_options(ic_gvins_core PRIVATE -Wall -O3)
+target_compile_options(ic_gvins_core PRIVATE -Wall)
 target_include_directories(ic_gvins_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -51,7 +51,7 @@ target_link_libraries(ic_gvins_core
         Eigen3::Eigen
         ${OpenCV_LIBS}
         glog::glog
-        ${YAML_CPP_LIBRARIES}
+        yaml-cpp::yaml-cpp
         ${CERES_LIBRARIES}
         TBB::tbb
 )
@@ -62,14 +62,19 @@ add_executable(${PROJECT_NAME}_ros
     src/ros/drawer_rviz.cc
 )
 target_compile_features(${PROJECT_NAME}_ros PRIVATE cxx_std_20)
-target_compile_options(${PROJECT_NAME}_ros PRIVATE -Wall -O3)
-ament_target_dependencies(${PROJECT_NAME}_ros
-    rclcpp
-    sensor_msgs
-    nav_msgs
-    geometry_msgs
+target_compile_options(${PROJECT_NAME}_ros PRIVATE -Wall)
+target_link_libraries(${PROJECT_NAME}_ros PRIVATE
+    ic_gvins_core
+    rclcpp::rclcpp
+    sensor_msgs::sensor_msgs__rosidl_typesupport_cpp
+    nav_msgs::nav_msgs__rosidl_typesupport_cpp
+    geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
 )
-target_link_libraries(${PROJECT_NAME}_ros ic_gvins_core)
+if(APPLE)
+    # ROS exports include Python message libraries unused by this C++ node.
+    # Do not load those libraries (which expect a Python host) at startup.
+    target_link_options(${PROJECT_NAME}_ros PRIVATE "LINKER:-dead_strip_dylibs")
+endif()
 
 # ROS executables live in lib/<package> for `ros2 run`; reusable libraries and
 # headers use the conventional lib/ and include/ prefixes.

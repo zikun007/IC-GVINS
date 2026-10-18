@@ -28,6 +28,7 @@
 
 #include <Eigen/Geometry>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <opencv2/opencv.hpp>
@@ -53,7 +54,7 @@ public:
     static constexpr double FARTHEST_DEPTH = 200; // 最远可用路标点深度
 
     MapPoint() = delete;
-    MapPoint(ulong id, const std::shared_ptr<Frame> &ref_frame, Vector3d pos, cv::Point2f keypoint, double depth,
+    MapPoint(std::uint64_t id, const std::shared_ptr<Frame> &ref_frame, Vector3d pos, cv::Point2f keypoint, double depth,
              MapPointType type);
 
     Vector3d &pos() {
@@ -65,7 +66,7 @@ public:
         return observed_times_;
     }
 
-    ulong id() const {
+    std::uint64_t id() const {
         return id_;
     }
 
@@ -135,7 +136,7 @@ public:
         depth_ = depth;
     }
 
-    ulong referenceFrameId();
+    std::uint64_t referenceFrameId();
 
     MapPointType &mapPointType() {
         std::unique_lock<std::mutex> lock(mappoint_mutex_);
@@ -175,7 +176,7 @@ private:
     int observed_times_;
     bool isoutlier_;
 
-    ulong id_;
+    std::uint64_t id_;
     MapPointType mappoint_type_{MAPPOINT_NONE}, mappoint_type_tmp_{MAPPOINT_NONE};
 };
 
