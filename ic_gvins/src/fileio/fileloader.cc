@@ -1,0 +1,118 @@
+/*
+ * IC-GVINS: A Robust, Real-time, INS-Centric GNSS-Visual-Inertial Navigation System
+ *
+ * Copyright (C) 2022 i2Nav Group, Wuhan University
+ *
+ *     Author : Hailiang Tang
+ *    Contact : thl@whu.edu.cn
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "ic_gvins/fileio/fileloader.h"
+
+#include <iostream>
+#include <sstream>
+
+FileLoader::FileLoader(const string &filename, int columns, int filetype) {
+    open(filename, columns, filetype);
+}
+
+FileLoader::~FileLoader() {
+    if (isOpen()) {
+        close();
+    }
+}
+
+bool FileLoader::open(const string &filename, int columns, int filetype) {
+    auto type = filetype == TEXT ? std::ios_base::in : (std::ios_base::in | std::ios_base::binary);
+    filefp_.open(filename, type);
+
+    columns_  = columns;
+    filetype_ = filetype;
+    return isOpen();
+}
+
+vector<double> FileLoader::load() {
+    load_();
+
+    return data_;
+}
+
+vector<vector<double>> FileLoader::loadn(int epochs) {
+    vector<vector<double>> datas;
+    datas.clear();
+
+    for (int k = 0; k < epochs; k++) {
+        if (load_()) {
+            datas.push_back(std::move(data_));
+        } else {
+            break;
+        }
+    }
+
+    return datas;
+}
+
+bool FileLoader::load(vector<double> &data) {
+    if (load_()) {
+        data = std::move(data_);
+        return true;
+    }
+
+    return false;
+}
+
+bool FileLoader::loadn(vector<vector<double>> &datas, int epochs) {
+    datas.clear();
+
+    for (int k = 0; k < epochs; k++) {
+        if (load_()) {
+            datas.push_back(std::move(data_));
+        } else {
+            break;
+        }
+    }
+
+    return !datas.empty();
+}
+
+bool FileLoader::load_() {
+    if (isEof())
+        return false;
+
+    if (filetype_ == TEXT) {
+        string line;
+        std::getline(filefp_, line);
+        if (line.empty())
+            return false;
+
+        data_.clear();
+        for (char &character : line) {
+            if (character == ',') {
+                character = ' ';
+            }
+        }
+        std::istringstream values(line);
+        double value;
+        while (values >> value) {
+            data_.push_back(value);
+        }
+    } else {
+        data_.resize(columns_);
+        filefp_.read((char *) data_.data(), sizeof(double) * columns_);
+    }
+
+    return true;
+}

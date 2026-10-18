@@ -27,19 +27,15 @@ Click the following image to open our video on [Bilibili](https://www.bilibili.c
 
 ### 1.1 System and compiler
 
-We recommend you use Ubuntu 18.04 or Ubuntu 20.04 with the newest compiler (**gcc>=8.0 or clang>=6.0**). 
+This ROS2 port targets Ubuntu 24.04 and ROS 2 Jazzy with a C++17 compiler.
 
 ```shell
-# gcc-8
-sudo apt install gcc-8 g++-8
-
-# Clang
-# sudo apt install clang
+sudo apt install build-essential python3-colcon-common-extensions
 ```
 
 ### 1.2 Robot Operating System (ROS)
 
-Follow [ROS Melodic installation instructions for Ubuntu 18.04](https://wiki.ros.org/melodic/Installation/Ubuntu) and [ROS Noetic installation instructions for Ubuntu 20.04](http://wiki.ros.org/noetic/Installation/Ubuntu).
+Install ROS 2 Jazzy, then source `/opt/ros/jazzy/setup.bash`. The optional visualizer needs `ros-jazzy-rviz2`.
 
 ### 1.3 Ceres Solver with its Dependencies
 
@@ -69,12 +65,15 @@ sudo apt install libyaml-cpp-dev
 
 ## 2 Build and run IC-GVINS
 
+For the tested ROS2 Jazzy + KAIST urban39 workflow, including Cyclone DDS,
+RViz2, bag generation and evo commands, see
+[`docs/02-ros2-run-guide.md`](docs/02-ros2-run-guide.md).
+
 ### 2.1 Build the source code
 
 ```shell
-# Make workspace directory
-mkdir ~/gvins_ws && cd ~/gvins_ws
-mkdir src && cd src
+# Make a colcon workspace
+mkdir -p ~/gvins_ws/src && cd ~/gvins_ws/src
 
 # Clone the repository into src directory
 git clone https://github.com/i2Nav-WHU/IC-GVINS.git
@@ -82,11 +81,8 @@ git clone https://github.com/i2Nav-WHU/IC-GVINS.git
 # To gvins_ws directory
 cd ..
 
-# Build the source code using catkin_make
-# For gcc
-catkin_make -j8 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8
-# For clang
-# catkin_make -j8 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select ic_gvins
 ```
 
 ### 2.2 Run demo dataset
@@ -95,24 +91,55 @@ If you have already downloaded the open-sourced dataset, run the following comma
 
 ```shell
 # Open a terminal and source the workspace environments
-# For bash
-source ~/gvins_ws/devel/setup.bash
-# For zsh
-# source ~/gvins_ws/devel/setup.zsh
+source /opt/ros/jazzy/setup.bash
+source ~/gvins_ws/install/setup.bash
 
 # Run IC-GVINS node
 # You should change the path in both the configuration file and command line
-roslaunch ic_gvins ic_gvins.launch configfile:=path/urban38/IC-GVINS/gvins.yaml
+ros2 launch ic_gvins ic_gvins.launch.py configfile:=/absolute/path/gvins.yaml
 
 # Open another terminal to play the ROS bag
-rosbag play path/urban38/urban38.bag
+ros2 bag play /absolute/path/dataset_bag
+```
+
+For the supplied raw KAIST urban39 directory, create a ROS2 bag and matching configuration first:
+
+```shell
+source /opt/ros/jazzy/setup.bash
+/usr/bin/python3 scripts/kaist_urban39_to_rosbag.py /mnt/OpenDataset/kaist-urban39 /tmp/urban39_bag
+/usr/bin/python3 scripts/generate_kaist_urban39_config.py /mnt/OpenDataset/kaist-urban39 ic_gvins/config/kaist-urban39.yaml
+ros2 launch ic_gvins ic_gvins.launch.py configfile:=$PWD/ic_gvins/config/kaist-urban39.yaml use_rviz:=true
+# In a second terminal:
+ros2 bag play /tmp/urban39_bag
+```
+
+`kaist_urban39_to_rosbag.py` debayers the left camera as BGGR and converts the KAIST IMU from FLU to the FRD convention required by IC-GVINS. Use `--bayer-pattern` or `--keep-flu` only when your data variant requires it.
+
+The exact `R_a_b`/`t_a_b` convention and the W/N/E/B/C/V frame mapping are documented in [docs/03-coordinate-frames.md](docs/03-coordinate-frames.md).
+
+The ROS2 package is self-contained under `ic_gvins/`: public headers are in
+`include/ic_gvins/`, implementation files in `src/`, and launch/configuration
+assets in `launch/` and `config/`. Repository-level dataset tools remain in
+`scripts/`, while documentation and figures remain in `docs/` and `resources/`.
+
+After a full replay, install evo with uv, then convert the two trajectories and evaluate translation errors:
+
+```shell
+uv tool install evo
+/usr/bin/python3 scripts/prepare_kaist_evo.py /path/to/output/trajectory.csv \
+  /mnt/OpenDataset/kaist-urban39/urban39-pankyo_pose/global_pose.csv \
+  /mnt/OpenDataset/kaist-urban39/urban39-pankyo_calibration/calibration/Vehicle2IMU.txt /tmp/urban39_evo
+evo_ape tum /tmp/urban39_evo/reference_imu_ned.tum /tmp/urban39_evo/estimate_imu_ned.tum -a --pose_relation trans_part
+# IC-GVINS writes one trajectory pose per 10 IMU updates. With urban39's
+# 100 Hz IMU, the output trajectory is 10 Hz, so 10 frames is about 1 s.
+evo_rpe tum /tmp/urban39_evo/reference_imu_ned.tum /tmp/urban39_evo/estimate_imu_ned.tum -a --pose_relation trans_part --delta 10 --delta_unit f
 ```
 
 ## 3 Datasets
 
 ### 3.1 Format
 
-We use standard ROS bag for IC-GVINS. The employed messages are as follows:
+We use standard ROS2 bag for IC-GVINS. The employed messages are as follows:
 
 | Sensor   | Message                                                                                 | Default Topic | KAIST Dataset (Hz) | IC-GVINS Dataset (Hz) |
 | ---------- | ----------------------------------------------------------------------------------------- | --------------- | -------------------- | ----------------------- |
@@ -154,7 +181,7 @@ You can run IC-GVINS with your self-collected dataset. Keep in mind the followin
 
 1. You should prepare well-synchronized GNSS, Camera, and IMU data in a ROS bag;
 2. The IMU data should be in front-right-down format;
-3. Modify the topic names in the ic_gvins.launch file;
+3. Modify the topic names in the ROS2 launch file;
 4. Modify the parameters in the configuration file.
 
 ### 3.5 Evaluation

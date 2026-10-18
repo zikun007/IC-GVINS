@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.analysis.extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages"
+  ],
+  "cmake.sourceDirectory": "${workspaceFolder}/ic_gvins",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/ic_gvins/compile_commands.json"
+}

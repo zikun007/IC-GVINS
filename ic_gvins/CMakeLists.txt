@@ -1,81 +1,94 @@
 cmake_minimum_required(VERSION 3.10)
 project(ic_gvins)
 
-set(CMAKE_CXX_STANDARD 14)
+# Use one language level across the estimator and ROS2 interface.
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Optimization
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
-# Build GVINS library
-include_directories(
-        ${PROJECT_SOURCE_DIR}
-        ${PROJECT_SOURCE_DIR}/ic_gvins)
-file(GLOB_RECURSE GVINS_SOURCE
-        ic_gvins/*.cc
-        ic_gvins/common/*.cc
-        ic_gvins/fileio/*.cc
-        ic_gvins/tracking/*.cc
-        ic_gvins/preintegration/*.cc)
-add_library(ic_gvins_core SHARED
-        ${GVINS_SOURCE})
-
-# OpenCV
 find_package(OpenCV REQUIRED)
-target_link_libraries(ic_gvins_core ${OpenCV_LIBS})
-
-# glog
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-find_package(Glog REQUIRED)
-target_link_libraries(ic_gvins_core ${GLOG_LIBRARIES})
-
-# Eigen3
 find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
-
-# yaml-cpp
 find_package(yaml-cpp REQUIRED)
-target_link_libraries(ic_gvins_core ${YAML_CPP_LIBRARIES})
-
-# Ceres
 find_package(Ceres REQUIRED)
-target_link_libraries(ic_gvins_core ${CERES_LIBRARIES})
-
-# boost
-find_package(Boost REQUIRED COMPONENTS filesystem)
-target_link_libraries(ic_gvins_core
-        ${Boost_LIBRARIES})
-
-# TBB
 find_package(TBB REQUIRED)
+
+find_package(glog CONFIG REQUIRED)
+
+# ROS-independent estimator library.
+add_library(ic_gvins_core SHARED
+    src/common/gpstime.cc
+    src/fileio/fileloader.cc
+    src/fileio/filesaver.cc
+    src/preintegration/preintegration_base.cc
+    src/preintegration/preintegration_earth.cc
+    src/preintegration/preintegration_earth_odo.cc
+    src/preintegration/preintegration_normal.cc
+    src/preintegration/preintegration_odo.cc
+    src/tracking/camera.cc
+    src/tracking/drawer.cc
+    src/tracking/frame.cc
+    src/tracking/map.cc
+    src/tracking/mappoint.cc
+    src/tracking/tracking.cc
+    src/ic_gvins.cc
+    src/misc.cc
+)
+target_compile_features(ic_gvins_core PUBLIC cxx_std_20)
+target_compile_options(ic_gvins_core PRIVATE -Wall -O3)
+target_include_directories(ic_gvins_core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(ic_gvins_core
-        TBB::tbb)
+    PUBLIC
+        Eigen3::Eigen
+        ${OpenCV_LIBS}
+        glog::glog
+        ${YAML_CPP_LIBRARIES}
+        ${CERES_LIBRARIES}
+        TBB::tbb
+)
 
-# abseil
-set(ABSL_PROPAGATE_CXX_STD true)
-add_subdirectory(thirdparty/abseil-cpp abseil-cpp)
-target_link_libraries(ic_gvins_core
-        absl::strings
-        absl::str_format
-        absl::time)
-
-# ROS interface
-find_package(catkin REQUIRED COMPONENTS
-        message_generation
-        roscpp
-        std_msgs)
-catkin_package(
-        LIBRARIES
-        CATKIN_DEPENDS roscpp std_msgs)
-include_directories(
-        ${catkin_INCLUDE_DIRS})
-
-# GVINS ROS with standard messages
+# ROS2 interface node.
 add_executable(${PROJECT_NAME}_ros
-        ROS/fusion_ros.cc
-        ROS/drawer_rviz.cc)
+    src/ros/fusion_ros.cc
+    src/ros/drawer_rviz.cc
+)
+target_compile_features(${PROJECT_NAME}_ros PRIVATE cxx_std_20)
+target_compile_options(${PROJECT_NAME}_ros PRIVATE -Wall -O3)
+ament_target_dependencies(${PROJECT_NAME}_ros
+    rclcpp
+    sensor_msgs
+    nav_msgs
+    geometry_msgs
+)
+target_link_libraries(${PROJECT_NAME}_ros ic_gvins_core)
 
-        add_dependencies(${PROJECT_NAME}_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_ros
-        ${catkin_LIBRARIES}
-        ic_gvins_core)
+# ROS executables live in lib/<package> for `ros2 run`; reusable libraries and
+# headers use the conventional lib/ and include/ prefixes.
+install(TARGETS ${PROJECT_NAME}_ros
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+install(TARGETS ic_gvins_core
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+install(DIRECTORY include/
+    DESTINATION include
+)
+install(DIRECTORY launch config
+    DESTINATION share/${PROJECT_NAME}
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.pyc" EXCLUDE
+)
+
+ament_export_include_directories(include)
+ament_export_libraries(ic_gvins_core)
+ament_package()

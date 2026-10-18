@@ -1,1 +1,68 @@
-.vscode/
+# ROS 2 / colcon workspace outputs
+/build*/
+/install*/
+/log*/
+
+# Runtime outputs and local datasets
+/output/
+/dataset/
+
+# ROS bag storage files outside dataset/
+*.bag
+*.db3
+*.db3-shm
+*.db3-wal
+*.mcap
+
+# CMake and compiled artifacts
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+compile_commands.json
+Testing/
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# Test and coverage artifacts
+*.gcda
+*.gcno
+*.gcov
+.coverage
+coverage/
+htmlcov/
+lcov.info
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.nox/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+
+# Editor, language-server, and OS files
+/.cache/
+.ccls-cache/
+.idea/
+*.swo
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Crash dumps and profiling output
+core
+core.*
+*.prof
+*.trace

@@ -1,0 +1,15 @@
+/imu0:
+  history: keep_last
+  depth: 200
+  reliability: reliable
+  durability: volatile
+/gnss0:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile
+/cam0:
+  history: keep_last
+  depth: 20
+  reliability: reliable
+  durability: volatile

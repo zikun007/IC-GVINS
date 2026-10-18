@@ -1,0 +1,40 @@
+# Generated from the KAIST urban39 calibration files.  Update outputpath as needed.
+outputpath: ./output/urban39
+is_make_outputdir: true
+initlength: 1
+imudatarate: 100
+iswithearth: true
+antlever: [0.07, 0.0, -0.23]
+imumodel:
+  arw: 0.1
+  vrw: 0.1
+  gbstd: 50.0
+  abstd: 50.0
+  corrtime: 1.0
+# GNSS outage simulation is disabled; keep GNSS enabled for the complete sequence.
+isusegnssoutage: false
+gnssoutagetime: 0
+gnssthreshold: 20
+# Bound centimetre-level formal RTK covariance without weakening fixed
+# solutions to the level of the dataset's float solutions.
+gnss_std_floor: 0.5
+# vrs_gps.csv already supplies quality-dependent standard deviations. Keep
+# those values stable instead of accumulating chi-square reweighting.
+gnss_adaptive_reweighting: false
+is_use_visualization: true
+track_check_histogram: false
+track_min_parallax: 20
+track_max_interval: 0.5
+track_max_features: 200
+reprojection_error_std: 1.5
+optimize_windows_size: 10
+optimize_num_iterations: 20
+optimize_estimate_extrinsic: false
+optimize_estimate_td: false
+cam0:
+  intrinsic: [816.4022147406, 817.3838856281, 608.8265842758, 266.6886565244, -2.3882017758]
+  distortion: [-0.0500404858, 0.1200121717, -0.0006259806, -0.0011825064, -0.063505208]
+  resolution: [1280, 560]
+  q_b_c: [0.49452176, 0.49777711, 0.50558467, 0.50204178]
+  t_b_c: [1.71239, -0.247401, 0.11589]
+  td_b_c: 0.0
